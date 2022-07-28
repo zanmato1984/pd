@@ -56,4 +56,4 @@ require (
 	gotest.tools/gotestsum v1.7.0
 )
 
-replace github.com/pingcap/tidb-dashboard => /data1/zanmato/dev/tidb-dashboard
+replace github.com/pingcap/tidb-dashboard => github.com/zanmato1984/tidb-dashboard v0.0.0-20220728060318-53041fb7205c
