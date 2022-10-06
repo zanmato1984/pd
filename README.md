@@ -11,6 +11,7 @@
 PD is the abbreviation for Placement Driver. It is used to manage and schedule the [TiKV](https://github.com/tikv/tikv) cluster.
 
 PD supports distribution and fault-tolerance by embedding [etcd](https://github.com/etcd-io/etcd).
+
 [<img src="docs/contribution-map.png" alt="contribution-map" width="180">](https://github.com/pingcap/tidb-map/blob/master/maps/contribution-map.md#pd-placement-driver-for-tikv)
 
 If you're interested in contributing to PD, see [CONTRIBUTING.md](./CONTRIBUTING.md). For more contributing information, please click on the contributor icon above.
