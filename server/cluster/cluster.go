@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -271,7 +272,7 @@ func (c *RaftCluster) Start(s Server) error {
 	c.regionStats = statistics.NewRegionStatistics(c.opt, c.ruleManager, c.storeConfigManager)
 	c.limiter = NewStoreLimiter(s.GetPersistOptions())
 
-	c.wg.Add(8)
+	c.wg.Add(9)
 	go c.runCoordinator()
 	go c.runMetricsCollectionJob()
 	go c.runNodeStateCheckJob()
@@ -280,9 +281,44 @@ func (c *RaftCluster) Start(s Server) error {
 	go c.runReplicationMode()
 	go c.runMinResolvedTSJob()
 	go c.runSyncConfig()
+	go c.updateLocationRulesAndStores()
 	c.running = true
 
 	return nil
+}
+
+func (c *RaftCluster) updateLocationRulesAndStores() {
+	defer logutil.LogPanic()
+	defer c.wg.Done()
+
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-c.ctx.Done():
+			log.Info("update location rule and store job is stopped")
+			return
+		case <-ticker.C:
+			stores := c.GetStores()
+			tiflashStores := []*core.StoreInfo{}
+			for _, store := range stores {
+				if store.GetLabelValue("engine") == "tiflash" && store.IsUp() {
+					tiflashStores = append(tiflashStores, store)
+				}
+			}
+			sort.Slice(tiflashStores, func(i, j int) bool {
+				return tiflashStores[i].GetID() < tiflashStores[j].GetID()
+			})
+			for i, store := range tiflashStores {
+				b := store.GetLabelValue("bucket_id")
+				if id, err := strconv.Atoi(b); len(b) == 0 || (err != nil && id != i) {
+					c.UpdateStoreLabels(store.GetID(), []*metapb.StoreLabel{{Key: "bucket_id", Value: strconv.Itoa(i)}}, false)
+				}
+			}
+			c.GetRuleManager().UpdateLoacationRule(int64(len(tiflashStores)))
+		}
+	}
 }
 
 // runSyncConfig runs the job to sync tikv config.

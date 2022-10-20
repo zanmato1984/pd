@@ -348,6 +348,9 @@ func (m *RuleManager) beginPatch() *ruleConfigPatch {
 }
 
 func (m *RuleManager) tryCommitPatch(patch *ruleConfigPatch) error {
+	if len(patch.mut.rules) == 0 && len(patch.mut.groups) == 0 {
+		return nil
+	}
 	patch.adjust()
 
 	ruleList, err := buildRuleList(patch)
